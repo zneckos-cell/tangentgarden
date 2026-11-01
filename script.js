@@ -7,6 +7,43 @@
 (function () {
   "use strict";
 
+  /* ---------- Screenshot lightbox ---------- */
+  var lightbox = document.getElementById("imageLightbox");
+  var lightboxImage = document.getElementById("lightboxImage");
+  var lightboxCaption = document.getElementById("lightboxCaption");
+  var lightboxTrigger = null;
+
+  if (lightbox && typeof lightbox.showModal === "function") {
+    document.querySelectorAll("a.shot").forEach(function (link) {
+      link.setAttribute("aria-haspopup", "dialog");
+      link.addEventListener("click", function (event) {
+        // Preserve the browser's open-in-new-tab shortcuts.
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        var thumbnail = link.querySelector("img");
+        lightboxTrigger = link;
+        lightboxImage.src = link.href;
+        lightboxImage.alt = thumbnail.alt;
+        lightboxCaption.textContent = link.querySelector(".shot-label").textContent;
+        lightbox.showModal();
+        document.documentElement.classList.add("lightbox-open");
+      });
+    });
+
+    lightbox.querySelector(".lightbox-close").addEventListener("click", function () {
+      lightbox.close();
+    });
+    lightbox.addEventListener("click", function (event) {
+      if (event.target === lightbox) lightbox.close();
+    });
+    // Native dialog handles Escape and keeps keyboard focus inside the modal.
+    lightbox.addEventListener("close", function () {
+      document.documentElement.classList.remove("lightbox-open");
+      lightboxImage.removeAttribute("src");
+      if (lightboxTrigger) lightboxTrigger.focus({ preventScroll: true });
+    });
+  }
+
   /* ---------- Sticky header shadow on scroll ---------- */
   var header = document.getElementById("siteHeader");
   var progress = document.getElementById("scrollProgress");

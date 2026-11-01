@@ -775,6 +775,58 @@ ol {
   aspect-ratio: 16 / 10;
 }
 
+/* ---------- Screenshot lightbox ---------- */
+html.lightbox-open { overflow: hidden; }
+a.shot { cursor: zoom-in; }
+.lightbox {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 4rem 1rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--cream);
+}
+.lightbox[open] { display: grid; place-items: center; }
+.lightbox::backdrop { background: rgba(15, 24, 16, 0.92); }
+.lightbox-content {
+  margin: 0;
+  max-width: 100%;
+  text-align: center;
+}
+.lightbox-content img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 10rem);
+  max-height: calc(100dvh - 10rem);
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+.lightbox-content figcaption { margin-top: 1rem; }
+.lightbox-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--cream);
+  border-radius: 50%;
+  background: var(--leaf-dark);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.lightbox-close:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+
 /* ---------- Garden gallery ---------- */
 .garden-gallery {
   display: grid;

@@ -1485,6 +1485,14 @@
       ↑
     </button>
 
-    <script type="module" src="script.js"></script>
+    <dialog class="lightbox" id="imageLightbox" aria-label="Screenshot viewer" aria-describedby="lightboxCaption">
+      <button class="lightbox-close" type="button" aria-label="Close image" autofocus>&times;</button>
+      <figure class="lightbox-content">
+        <img id="lightboxImage" alt="" />
+        <figcaption id="lightboxCaption"></figcaption>
+      </figure>
+    </dialog>
+
+    <script defer src="script.js"></script>
   </body>
 </html>
