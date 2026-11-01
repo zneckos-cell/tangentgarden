@@ -188,8 +188,8 @@
                 energy bars, no daily login walls, and no ads. You can play for
                 ten minutes between meetings or lose an evening to a
                 marathon harvest. The game saves your garden, your collections,
-                and your typing statistics locally and — if you create an
-                account — syncs them so a new computer never means a lost garden.
+                and your typing statistics locally. An optional account uploads
+                selected statistics; farm export/import moves your whole garden.
               </p>
               <p>
                 The world is deliberately cozy and colorful. Crops are grouped
@@ -201,8 +201,8 @@
               </p>
               <p>
                 Tangentgarden is made by a small indie team and is free to
-                download. It runs offline on Windows, reads keyboard input only
-                while the game window is focused, and never sends what you type
+                download. It runs offline on Windows, reads keyboard state even
+                while you work in other apps, and never sends what you type
                 anywhere. If you've ever wanted a reason to practice typing that
                 wasn't a blank screen and a blinking cursor, this is it.
               </p>
@@ -285,7 +285,7 @@
               <div class="feature-icon" aria-hidden="true">🛡️</div>
               <h3>Private and offline by design</h3>
               <p>
-                The game reads input only while focused, stores progress on
+                The game uses key states for growth, stores progress on
                 your machine, and needs no account to play. Optional sync is
                 just that — optional. No telemetry, no ads, no keylogging.
               </p>
@@ -981,10 +981,10 @@
             <div>
               <h3>Tangentgarden is not a keylogger.</h3>
               <p>
-                The game reads keystrokes <strong>only while its window is
-                focused</strong>, only to drive gameplay, and never records,
-                transmits, or stores the actual keys you press. What you type
-                stays on your machine.
+                <strong>Key states grow your garden. Your typed text is not recorded.</strong>
+                While running, Tangentgarden can detect key presses even when
+                another app has focus. It uses them for gameplay and keeps
+                counters, not a transcript of what you write.
               </p>
             </div>
           </div>
@@ -992,58 +992,45 @@
           <div class="card-grid cols-3 reveal">
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🖥️</div>
-              <h3>Only while focused</h3>
-              <p>
-                Input is read only when the game window is active and in
-                focus. If Tangentgarden is in the background, minimized, or
-                not the active window, it receives nothing.
-              </p>
+              <h3>Works alongside other apps</h3>
+              <p>Work mode lets your garden grow while you type elsewhere.
+                Windows key states are sampled while the game runs; the game
+                does not need keyboard focus.</p>
             </article>
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🚫</div>
-              <h3>No other apps monitored</h3>
-              <p>
-                The game does not monitor, capture, or read typing in any other
-                application. It has no access to your browser, email, password
-                manager, or anything outside its own window.
-              </p>
+              <h3>No typed-text history</h3>
+              <p>The ordinary input path checks which keys are down. It does
+                not turn those samples into sentences, read documents, or keep
+                an ordered log of your typing.</p>
             </article>
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🔍</div>
-              <h3>Not a keylogger</h3>
-              <p>
-                A keylogger secretly records keystrokes to send elsewhere.
-                Tangentgarden does the opposite: it consumes keystrokes in the
-                moment for gameplay and discards them. Nothing is logged.
-              </p>
+              <h3>Inspect the input code</h3>
+              <p>See real source excerpts below, with complete input files to
+                read. The distinction is visible in the implementation:
+                temporary key states and counters, rather than text recording.</p>
             </article>
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🔑</div>
-              <h3>No passwords collected</h3>
-              <p>
-                The game never asks for, stores, or transmits passwords or
-                credentials of any kind. Your accounts elsewhere are none of
-                our business — and technically unreachable.
-              </p>
+              <h3>Pause when you need to</h3>
+              <p>Pause stops gameplay registration. You can also choose apps
+                that automatically pause registration. These controls do not
+                stop the input sampler; exit the game to stop sampling.</p>
             </article>
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🔒</div>
-              <h3>No sensitive data captured</h3>
-              <p>
-                We don't collect personal information, payment details, or
-                anything you type. The only thing we derive is aggregate
-                statistics — WPM and accuracy — and those stay local by
-                default.
-              </p>
+              <h3>Local counters &amp; saves</h3>
+              <p>Your farm saves include daily and lifetime counts per key.
+                These are totals, not a sequence of presses. The separate
+                typing trial uses text entered into its own practice field.</p>
             </article>
             <article class="trust-card">
               <div class="trust-icon" aria-hidden="true">🎮</div>
-              <h3>Gameplay only</h3>
-              <p>
-                Keyboard input is used for exactly one thing: playing the game.
-                Words you type drive crop growth. That's it. No telemetry, no
-                analytics on your typing, no third parties.
-              </p>
+              <h3>Account optional</h3>
+              <p>Play offline without signing in. Optional account features use
+                email and a password for authentication; statistics uploads
+                send progression totals, not raw input samples or typed text.</p>
             </article>
           </div>
 
@@ -1051,22 +1038,104 @@
             <div class="badge">🔒 Offline-first</div>
             <div class="badge">📦 No telemetry</div>
             <div class="badge">🛡️ No keylogging</div>
-            <div class="badge">🔑 No passwords</div>
+            <div class="badge">📝 No typing transcript</div>
             <div class="badge">👤 Account optional</div>
             <div class="badge">💾 Local saves</div>
             <div class="badge">🚫 No ads</div>
             <div class="badge">🔍 Open about input</div>
           </div>
 
+
+          <details class="input-proof reveal" id="input-code">
+            <summary>
+              <span class="input-proof-symbol" aria-hidden="true">&lt;/&gt;</span>
+              <span><strong>See how keyboard input works</strong>
+                <span class="input-proof-subtitle">Real C# source · key states → gameplay → counters</span></span>
+              <span class="input-proof-action" aria-hidden="true">Explore code</span>
+            </summary>
+            <div class="input-proof-body">
+              <p class="input-proof-intro">For readers who prefer code to promises.
+                These are consecutive, unedited excerpts from the local source,
+                checked on 1 November 2026. The complete files are linked below.</p>
+                <article class="input-code-step">
+                  <div class="input-code-explanation">
+                    <span class="input-step-number">01</span>
+                    <h4>A key state, not a character</h4>
+                    <p>The high bit answers one question: is this virtual key down right now? This function returns a boolean, not typed text. It works across apps, so focus is not a privacy boundary.</p>
+                  </div>
+                  <div class="input-code-panel">
+                    <div class="input-code-file"><span>C# · Main.cs</span><span>Lines 138–142</span></div>
+                    <pre tabindex="0" aria-label="Source excerpt from Main.cs"><code>private static bool IsDown(int key)
+{
+    // Den högsta biten visar om knappen är nere just nu.
+    return (GetAsyncKeyState(key) &amp; 0x8000) != 0;
+}</code></pre>
+                  </div>
+                </article>
+                <article class="input-code-step">
+                  <div class="input-code-explanation">
+                    <span class="input-step-number">02</span>
+                    <h4>A temporary, bounded queue</h4>
+                    <p>The worker samples roughly every 10 ms. The main thread takes samples out of the queue for gameplay. At 256 pending samples the queue is cleared, limiting the temporary backlog; it is not a saved typing history.</p>
+                  </div>
+                  <div class="input-code-panel">
+                    <div class="input-code-file"><span>C# · WindowsInputCapture.cs</span><span>Lines 28–38</span></div>
+                    <pre tabindex="0" aria-label="Source excerpt from WindowsInputCapture.cs"><code>while(!_stop.WaitOne(10)) {
+    var down=_readSnapshot?.Invoke()??new bool[256];
+    if(_readSnapshot==null)for(int key=1;key&lt;255;key++)if(IsCountedKey(key))down[key]=IsDown(key);
+    GetCursorPos(out var point);long now=Stopwatch.GetTimestamp();
+    var sample=new Sample(down,point.X,point.Y,(now-previous)/(double)Stopwatch.Frequency,_registrationBlocked?.Invoke()??false);previous=now;
+    lock(_samples) {
+        // A suspended game must not accumulate unbounded history.
+        if(_samples.Count&gt;=256)_samples.Clear();
+        _samples.Enqueue(sample);
+    }
+}</code></pre>
+                  </div>
+                </article>
+                <article class="input-code-step">
+                  <div class="input-code-explanation">
+                    <span class="input-step-number">03</span>
+                    <h4>Totals per key, saved locally</h4>
+                    <p>These arrays count presses per key for today and all time. The local save preserves these totals. They contain neither the order of presses nor the words you typed.</p>
+                  </div>
+                  <div class="input-code-panel">
+                    <div class="input-code-file"><span>C# · KeyStatistics.cs</span><span>Lines 44–53</span></div>
+                    <pre tabindex="0" aria-label="Source excerpt from KeyStatistics.cs"><code>private void RecordKeyPress(int code)
+{
+    code = NormalizeGardenKey(code);
+    if (code &lt; 0 || code &gt;= 256) return;
+    _keyToday[code]++;
+    _keyForever[code]++;
+    _progressDirty = true;
+    if (_gardenKeys.TryGetValue(code, out var views))
+        foreach (var view in views) view.QueueRedraw();
+}</code></pre>
+                  </div>
+                </article>
+              <div class="input-source-links">
+                <strong>Read the complete input files</strong>
+                <a href="assets/input-source/Main.cs.txt">Main.cs ↗</a>
+                <a href="assets/input-source/WindowsInputCapture.cs.txt">WindowsInputCapture.cs ↗</a>
+                <a href="assets/input-source/GardenInactivity.cs.txt">GardenInactivity.cs ↗</a>
+                <a href="assets/input-source/KeyStatistics.cs.txt">KeyStatistics.cs ↗</a>
+              </div>
+              <p class="input-proof-note">These excerpts explain the ordinary input
+                path; they are not an independent security audit or proof that a
+                downloaded executable matches this source. The linked files are a
+                dated source snapshot, not the entire game.</p>
+            </div>
+          </details>
+
           <div class="prose reveal trust-fineprint">
             <p>
-              In technical terms: Tangentgarden uses standard OS keyboard input
-              delivered to the focused application. It does not install a
-              system-wide keyboard hook, does not run as a background service,
-              and does not request any privilege broader than a normal desktop
-              application. Optional account sync transmits only an aggregate
-              progression snapshot (counts and statistics), encrypted in
-              transit, and never the raw keystrokes that produced them. You can
+              In technical terms: the Windows input path polls GetAsyncKeyState
+              on a worker thread, approximately every 10 ms, without installing
+              a keyboard hook. Short-lived samples contain key states, cursor
+              position, elapsed time and an app-blocking flag. The main thread
+              consumes them for gameplay. Local saves retain progression and
+              counters, not an ordered keystroke history. Optional account
+              authentication and statistics uploads use HTTPS. You can
               play the entire game, start to finish, with the network cable
               unplugged.
             </p>
@@ -1175,9 +1244,8 @@
                 <span class="review-playtime">120.7 hrs on record</span>
               </header>
               <p>
-                "The fact that it reads input only while focused put my mind at
-                ease. It's the only 'typing game' I actually trust enough to
-                leave installed."
+                Review placeholder — player feedback will be added here
+                when available.
               </p>
               <footer class="review-foot">— placeholder reviewer · 38 helpful</footer>
             </article>
@@ -1248,13 +1316,13 @@
             <details class="faq-item">
               <summary>Is Tangentgarden a keylogger?</summary>
               <div class="faq-answer">
-                <p>No. A keylogger secretly records keystrokes to send them elsewhere. Tangentgarden reads keystrokes only while its window is focused, uses them in the moment to drive gameplay, and discards them. Nothing is logged, stored, or transmitted.</p>
+                <p>Tangentgarden samples key states across apps for gameplay, but does not keep a transcript or an ordered keystroke log. Local saves include per-key counters. <a href="#input-code">Inspect the input code above</a> for the implementation and its limits.</p>
               </div>
             </details>
             <details class="faq-item">
               <summary>Does the game read what I type in other apps?</summary>
               <div class="faq-answer">
-                <p>No. The game receives keyboard input only when it is the active, focused window. It has no access to your browser, email, password manager, or any other application, and it installs no system-wide hooks.</p>
+                <p>It detects key presses even while other apps have focus, so Work mode can grow your garden. The ordinary input path samples Windows key states rather than reading the text inside those apps. Pause or app exclusions stop gameplay registration; exit the game to stop sampling.</p>
               </div>
             </details>
             <details class="faq-item">
@@ -1266,13 +1334,13 @@
             <details class="faq-item">
               <summary>Does it collect passwords or personal information?</summary>
               <div class="faq-answer">
-                <p>No. The game never asks for, stores, or transmits passwords or credentials. It collects no personal information. The only data it derives is aggregate typing statistics (WPM and accuracy), and those stay on your machine unless you opt into account sync.</p>
+                <p>The ordinary input path does not reconstruct or save passwords or typed sentences. The optional account does ask for an email and password to authenticate with the account service over HTTPS. Login passwords and session tokens are not saved to disk in this version. Play offline without an account if you prefer.</p>
               </div>
             </details>
             <details class="faq-item">
               <summary>Do I need an account to play?</summary>
               <div class="faq-answer">
-                <p>No. The game is fully playable offline with no account. An optional account lets you sync your garden, collections, and statistics across computers. The account stores a progression snapshot, not your keystrokes.</p>
+                <p>No. The game is fully playable offline with no account. An optional account uploads selected progression statistics, not the full farm or raw key samples. Use the game’s explicit farm export/import to move the whole farm to another computer.</p>
               </div>
             </details>
             <details class="faq-item">
