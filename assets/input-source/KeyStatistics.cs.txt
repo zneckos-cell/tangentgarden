@@ -1,0 +1,70 @@
+using Godot;
+using System;
+
+public partial class Main
+{
+	private long[] _keyToday = new long[256];
+	private long[] _keyForever = new long[256];
+	private bool _showKeyCounts;
+	private bool _countForever;
+	private Button _countToggle = null!;
+	private Button _periodToggle = null!;
+
+	private void SetupKeyStatistics()
+	{
+		_countToggle = new Button
+		{
+			Text = _showKeyCounts ? "Count: on" : "Count: off", Position = new Vector2(210, 30), Size = new Vector2(130, 32),
+			FocusMode = Control.FocusModeEnum.None
+		};
+		_periodToggle = new Button
+		{
+			Text = _countForever ? "Forever" : "Today", Position = new Vector2(210, 70), Size = new Vector2(130, 32),
+			FocusMode = Control.FocusModeEnum.None,
+			TooltipText = "Today counts this day. Forever counts all saved presses."
+		};
+		_countToggle.Pressed += () =>
+		{
+			_showKeyCounts = !_showKeyCounts;
+			_progressDirty=true;
+			_countToggle.Text = _showKeyCounts ? "Count: on" : "Count: off";
+			RedrawGardenKeys();
+		};
+		_periodToggle.Pressed += () =>
+		{
+			_countForever = !_countForever;
+			_progressDirty=true;
+			_periodToggle.Text = _countForever ? "Forever" : "Today";
+			RedrawGardenKeys();
+		};
+		AddChild(_countToggle);
+		AddChild(_periodToggle);
+	}
+
+	private void RecordKeyPress(int code)
+	{
+		code = NormalizeGardenKey(code);
+		if (code < 0 || code >= 256) return;
+		_keyToday[code]++;
+		_keyForever[code]++;
+		_progressDirty = true;
+		if (_gardenKeys.TryGetValue(code, out var views))
+			foreach (var view in views) view.QueueRedraw();
+	}
+
+	private void RedrawGardenKeys()
+	{
+		foreach (var views in _gardenKeys.Values)
+			foreach (var view in views) view.QueueRedraw();
+	}
+
+	private static int PlantSlots(int code) => code == 32 ? 3 : (code == 160 || code == 161 ? 2 : 1);
+
+	private static string CompactKeyCount(long count)
+	{
+		string[] suffixes={"","k","m","b","t","p","e"};
+		double value=count;int suffix=0;
+		while(value>=1000 && suffix<suffixes.Length-1){value/=1000;suffix++;}
+		return suffix==0?count.ToString():value.ToString("0.#",System.Globalization.CultureInfo.InvariantCulture)+suffixes[suffix];
+	}
+}

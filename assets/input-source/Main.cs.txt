@@ -1,0 +1,193 @@
+using Godot;
+using System;
+using System.Runtime.InteropServices;
+
+public partial class Main : Node2D
+{
+	// Windows-funktionen berättar om en knapp är nedtryckt just nu.
+	[DllImport("user32.dll")]
+	private static extern short GetAsyncKeyState(int virtualKey);
+
+	// Endast tillfälligt minne: var knappen nere vid förra kontrollen?
+	private readonly bool[] _wasDown = new bool[256];
+
+	private long _keyboardPresses;
+	private long _mouseClicks;
+
+	private double _timeSincePoll;
+	private const double PollInterval = 0.01; // 100 kontroller/sekund.
+
+	private Label _counterLabel = null!;
+
+	public override void _Ready()
+	{
+		if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--release-frame-benchmark") >= 0 &&
+			System.Environment.GetEnvironmentVariable("TANGENTGARDEN_BENCHMARK") == "isolated-v1")
+			_releaseFrameBenchmark = true;
+		#if DEBUG
+		_modelQaMode = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--garden-model-qa") >= 0;
+		_interactiveQaMode=System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--garden-input-qa") >= 0 || System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--farm-editor-input-qa") >= 0 || System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--woodland-input-qa") >= 0;
+		_artQaMode=System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--garden-art-qa") >= 0;
+		_qaMode = _artQaMode || _interactiveQaMode || _modelQaMode || System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--garden-qa") >= 0;
+		_resourceBudgetQa=System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--resource-budget-qa")>=0;
+		_bakeArtBounds=System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--bake-art-bounds")>=0;
+		if(MenuPolishPreview && OperatingSystem.IsWindows() && DisplayServer.GetName()!="headless")ShowGardenNativeWindow(NativeWindowHandle(GetWindow()),0);
+#endif
+		// En högre bildfrekvens gör att vi normalt kan kontrollera
+		// knapparna ungefär 100 gånger per sekund.
+		DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+		Engine.MaxFps = 120;
+
+		InstallPopupRendering();
+		SetupAppearance();
+		CreateCounterLabel();
+		CreateFarm();
+		SetupSaving();
+		SetupCloud();
+		SetupFriends();
+		SetupKeyStatistics();
+		SetupWoodenSigns();
+		SetupCropShop();
+		SetupBuildingHover(_barnButton);
+		SetupBuildingHover(_marketButton);
+		SetupJournal();
+		SetupWindowZoom();
+		SetupGardenDetails();
+		SetupAnimalCompanion();
+		SetupPondFishing();
+		SetupWoodlandFriends();
+		SetupGardenLighting();
+		SetupFurnitureCabinet();
+		SetupWorkshop();
+		SetupDecorations();
+		SetupFarmEditor();
+		SetupDesktopPasture();
+		InstallGardenPopupDismissal();
+		SetupNavigation();
+		ApplyGardenTheme(this);
+		Callable.From(FinishPastureStartup).CallDeferred();
+
+		// Knappar som redan hålls nere vid starten räknas inte.
+		for (int key = 1; key < 255; key++)
+		{
+			if (IsCountedKey(key))
+				_wasDown[key] = IsDown(key);
+		}
+
+		UpdateHeldGardenKeys(_wasDown);
+		UpdateCounterLabel();
+#if DEBUG
+		if(_bakeArtBounds){BakeRuntimeArt();GetTree().Quit();return;}
+#endif
+		StartInputCapture();
+		if (_releaseFrameBenchmark) _ = RunReleaseFrameBenchmark();
+#if DEBUG
+		if (_qaMode) _ = RunGardenQa();
+#endif
+	}
+
+	public override void _Process(double delta)
+	{
+		UpdateResourceBudget();
+		UpdateGardenFlow(delta);
+		CheckActivityDate();
+		UpdateMarketArrows(delta);
+		UpdateDesktopPasture(delta);
+		UpdateMeadowFeeding(delta);
+		UpdateCozy(delta);
+		UpdateHelperChore();
+		UpdateMeadowVisits(delta);
+		UpdateHomeStories(delta);
+		UpdateArrangementsWindow(delta);
+		UpdateBlueprintMarks();
+		UpdateCropCrafts(delta);
+		UpdateMeadowPersonality(delta);
+		UpdateMeadowWeather(delta);
+		UpdateWorkshop(delta);
+		UpdatePopupRendering(delta);
+		UpdateMarketBird(delta);
+		UpdateGardenLighting(delta);
+		UpdateCropGlowLights(delta);
+		UpdateJournal(delta);
+		UpdateFocusTimer(delta);
+		UpdateWoodlandFriendDays(delta);
+		UpdateDailyDeliveryBoard(delta);
+		UpdateDecorationPreview();
+		UpdateFarmEditorPointer();
+#if DEBUG
+		if (_qaMode && !_interactiveQaMode && !_resourceBudgetQa) return;
+#endif
+		UpdateGardenDetails(delta);
+		PumpWindowDragging();
+		if(_inputCapture!=null){DrainInputCapture();return;}
+		_timeSincePoll += delta;
+		_inputSampleElapsed += delta;
+
+		if (_timeSincePoll < PollInterval)
+			return;
+
+		_timeSincePoll %= PollInterval;
+
+		double elapsed=_inputSampleElapsed;
+		_inputSampleElapsed=0;
+		var snapshot=new bool[256];
+		for(int key=1;key<255;key++) if(IsCountedKey(key)) snapshot[key]=IsDown(key);
+		ApplyCapturedInput(snapshot,DisplayServer.MouseGetPosition(),elapsed);
+	}
+
+	private static bool IsDown(int key)
+	{
+		// Den högsta biten visar om knappen är nere just nu.
+		return (GetAsyncKeyState(key) & 0x8000) != 0;
+	}
+
+	private static bool IsMouseButton(int key)
+	{
+		// Vänster, höger, mitten och två sidoknappar.
+		return key == 1 || key == 2 || key == 4 ||
+			   key == 5 || key == 6;
+	}
+
+	private static bool IsCountedKey(int key)
+	{
+		// Windows rapporterar både gemensamma och vänster/höger-
+		// versioner av Shift, Ctrl och Alt. Hoppa över de gemensamma
+		// så att ett tryck inte räknas två gånger.
+		if (key == 16 || key == 17 || key == 18)
+			return false;
+
+		// Kod 3 är en särskild Windows-signal, ingen musknapp.
+		if (key == 3)
+			return false;
+
+		return IsMouseButton(key) || (key >= 8 && key <= 254);
+	}
+
+	private void CreateCounterLabel()
+	{
+		// Texten placeras ovanpå din befintliga gröna ruta.
+		_counterLabel = new Label
+		{
+			Visible = false,
+			Position = new Vector2(210, 24),
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+
+		_counterLabel.AddThemeFontSizeOverride("font_size", 15);
+		_counterLabel.AddThemeColorOverride("font_color", new Color("#3d3729"));
+		_counterLabel.AddThemeColorOverride(
+			"font_shadow_color", Colors.Transparent);
+		_counterLabel.AddThemeConstantOverride("shadow_offset_x", 1);
+		_counterLabel.AddThemeConstantOverride("shadow_offset_y", 1);
+
+		AddChild(_counterLabel);
+	}
+
+	private void UpdateCounterLabel()
+	{
+		_counterLabel.Text =
+			$"Keys: {_keyboardPresses}\n" +
+			$"Mouse clicks: {_mouseClicks}\n" +
+			$"Today: {_todayPresses}";
+	}
+}

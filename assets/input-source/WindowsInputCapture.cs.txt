@@ -1,0 +1,68 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using Godot;
+
+public partial class Main
+{
+	// Capture key states independently of rendering. The worker never touches
+	// Godot objects, saves, text, or gameplay; the main thread owns all effects.
+	private sealed class InputCapture : IDisposable
+	{
+		internal sealed record Sample(bool[] Down,int X,int Y,double Elapsed,bool Blocked=false);
+		[StructLayout(LayoutKind.Sequential)] private struct NativePoint {public int X,Y;}
+		[DllImport("user32.dll")] private static extern bool GetCursorPos(out NativePoint point);
+		private readonly Queue<Sample> _samples=new();
+		private readonly ManualResetEvent _stop=new(false);
+		private readonly Thread _thread;
+		private readonly Func<bool[]> _readSnapshot;
+		private readonly Func<bool> _registrationBlocked;
+		public InputCapture(Func<bool[]> readSnapshot=null,Func<bool> registrationBlocked=null) {
+			_readSnapshot=readSnapshot;_registrationBlocked=registrationBlocked;
+			_thread=new Thread(Run){IsBackground=true,Name="Garden input capture"};_thread.Start();
+		}
+		private void Run() {
+			long previous=Stopwatch.GetTimestamp();
+			while(!_stop.WaitOne(10)) {
+				var down=_readSnapshot?.Invoke()??new bool[256];
+				if(_readSnapshot==null)for(int key=1;key<255;key++)if(IsCountedKey(key))down[key]=IsDown(key);
+				GetCursorPos(out var point);long now=Stopwatch.GetTimestamp();
+				var sample=new Sample(down,point.X,point.Y,(now-previous)/(double)Stopwatch.Frequency,_registrationBlocked?.Invoke()??false);previous=now;
+				lock(_samples) {
+					// A suspended game must not accumulate unbounded history.
+					if(_samples.Count>=256)_samples.Clear();
+					_samples.Enqueue(sample);
+				}
+			}
+		}
+		public Sample Take() {lock(_samples)return _samples.Count>0?_samples.Dequeue():null;}
+		public void Clear() {lock(_samples)_samples.Clear();}
+		public void Dispose() {_stop.Set();_thread.Join();_stop.Dispose();Clear();}
+	}
+	private InputCapture _inputCapture;
+	private void StartInputCapture() {
+		if(!OperatingSystem.IsWindows() || DisplayServer.GetName()=="headless")return;
+#if DEBUG
+		if(_qaMode && !_resourceBudgetQa)return;
+#endif
+		_inputCapture=new InputCapture(registrationBlocked:ForegroundRegistrationBlocked);
+	}
+	private void DrainInputCapture() {
+		InputCapture.Sample sample;
+		while((sample=_inputCapture.Take())!=null)
+			ApplyCapturedInput(sample.Down,new Vector2I(sample.X,sample.Y),sample.Elapsed,sample.Blocked);
+	}
+	private void ApplyCapturedInput(bool[] snapshot,Vector2I pointer,double elapsed,bool registrationBlocked=false) {
+		if(_photoMode){Array.Copy(snapshot,_wasDown,256);return;}
+		PollPastureShortcut((snapshot[162] || snapshot[163]) && (snapshot[164] || snapshot[165]) && snapshot[77]);
+		if(_armedSeed>=0 || _plantingPointerActive)PollSeedPlantingPointer(snapshot[1],pointer);
+		bool mouseMoved=_lastActivityPointer.HasValue && pointer!=_lastActivityPointer.Value;
+		_lastActivityPointer=pointer;
+		if(_decoratingIndex>=0 || _editingFarm || _editingMeadow || _inputPaused || registrationBlocked || ForegroundRegistrationBlocked() || CozyTextFocused() || MemoryBookTextFocused()) {
+			_pendingLeftControl=false;Array.Copy(snapshot,_wasDown,256);UpdateHeldGardenKeys(snapshot);return;
+		}
+		ProcessInputSample(snapshot,mouseMoved,elapsed);
+	}
+}

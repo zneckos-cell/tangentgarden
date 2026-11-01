@@ -1,0 +1,95 @@
+using Godot;
+using System;
+
+public partial class Main
+{
+	private const double GlobalMossSeconds=120;
+	private const double KeyDecaySeconds=600;
+	private double[] _keyIdleSeconds=new double[256];
+	private double _globalIdleSeconds;
+	private double _inputSampleElapsed;
+	private Vector2I? _lastActivityPointer;
+	private bool _pendingLeftControl;
+	private double _pendingControlSeconds;
+
+	// Snapshot all keys together so AltGr's synthetic Ctrl is never counted first.
+	private void ProcessInputSample(bool[] down,bool mouseMoved,double elapsed)
+	{
+		if(_editingFarm || _editingMeadow){Array.Copy(down,_wasDown,256);UpdateHeldGardenKeys(down);return;}
+		bool keyboardActive=false;
+		for(int key=1;key<255;key++)if(IsCountedKey(key) && !IsMouseButton(key) && down[key])keyboardActive=true;
+		UpdatePondIdle(elapsed,keyboardActive);
+		bool active=mouseMoved;
+		bool altGr=down[165];
+		if(altGr)_pendingLeftControl=false;
+		for(int key=1;key<255;key++)
+		{
+			if(!IsCountedKey(key))continue;
+			active|=down[key];
+			if(down[key] && !_wasDown[key])
+			{
+				if(key==162)
+				{
+					if(!altGr){_pendingLeftControl=true;_pendingControlSeconds=0;}
+				}
+				else RegisterObservedPress(key);
+			}
+		}
+		// Windows may expose the synthetic Ctrl one poll before right Alt.
+		// Briefly defer Ctrl; an ordinary quick Ctrl tap still counts on release.
+		if(_pendingLeftControl)
+		{
+			_pendingControlSeconds+=elapsed;
+			if(!down[162] || _pendingControlSeconds>=0.05)
+			{
+				RegisterObservedPress(162);_pendingLeftControl=false;
+			}
+		}
+		UpdateHeldGardenKeys(down);
+		for(int key=1;key<255;key++)_wasDown[key]=down[key];
+		ApplyGardenInactivity(elapsed,active);
+	}
+	private void RegisterObservedPress(int key)
+	{
+		if((key==1 || key==2) && IsSeedUiClick())return;
+		if(key==1)AdvancePondFishing();
+		if(_gardenKeys.TryGetValue(NormalizeGardenKey(key),out var views))
+			foreach(var view in views)view.PulsePress();
+		if(IsMouseButton(key))_mouseClicks++;else {_keyboardPresses++;AdvanceMeadowPlanter();AdvanceFlowerGarden();AdvanceLegendaryBreeding();AdvanceTreeFruits();AdvanceMasterCultivation();AdvanceChallenge();AdvanceBerryPatch();AdvanceWoodlandResources();}
+		if(!IsMouseButton(key) || key==1 || key==2)
+		{
+			RecordKeyPress(key);AdvanceGardenKey(key);
+		}
+		_todayPresses++;_progressDirty=true;UpdateCounterLabel();
+	}
+	private void ApplyGardenInactivity(double elapsed,bool anyActivity)
+	{
+		if(_keepFarm)return;
+		_globalIdleSeconds=anyActivity?0:_globalIdleSeconds+elapsed;
+		foreach(int code in _gardenKeys.Keys)
+		{
+			_keyIdleSeconds[code]=Math.Min(KeyDecaySeconds*128,_keyIdleSeconds[code]+elapsed);
+			if(_keyStages[code]>0 && elapsed>0)_progressDirty=true;
+			int before=_keyStages[code];
+			if(_globalIdleSeconds>=GlobalMossSeconds && GrowthPhase(code)<=0)
+				SetDormantStage(code,0);
+			else if(_keyIdleSeconds[code]>=KeyDecaySeconds)
+			{
+				int steps=(int)Math.Min(128,Math.Floor(_keyIdleSeconds[code]/KeyDecaySeconds));
+				_keyIdleSeconds[code]%=KeyDecaySeconds;
+				for(int step=0;step<steps;step++)
+					SetDormantStage(code,GrowthPhase(code)<=0?0:_keyStages[code]-1);
+			}
+			if(before!=_keyStages[code])
+			{
+				foreach(var view in _gardenKeys[code])view.QueueRedraw();
+				_progressDirty=true;
+			}
+		}
+	}
+	private void SetDormantStage(int code,int stage)
+	{
+		_keyStages[code]=stage;
+		if(stage<3)for(int slot=0;slot<PlantSlots(code);slot++){_planterVariants[code*3+slot]=-1;_harvestsRemaining[code*3+slot]=0;}
+	}
+}
