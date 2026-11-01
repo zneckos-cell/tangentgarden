@@ -827,6 +827,53 @@ a.shot { cursor: zoom-in; }
 }
 .lightbox-close:focus-visible { outline: 3px solid white; outline-offset: 4px; }
 
+/* Text viewer uses the same modal behavior as the screenshot lightbox. */
+.code-lightbox {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: clamp(.5rem, 3vw, 2rem);
+  border: 0;
+  background: transparent;
+  color: #e1eddc;
+}
+.code-lightbox::backdrop { background: rgba(15, 24, 16, .92); }
+.code-lightbox[open] { display: grid; place-items: center; }
+.code-lightbox-window {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 100%);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #486347;
+  border-radius: var(--radius);
+  background: #19271f;
+  box-shadow: var(--shadow-lg);
+}
+.code-lightbox-header, .code-lightbox-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  background: #24372a;
+  flex-shrink: 0;
+}
+.code-lightbox-label { color: #c2dbb5; font-size: .75rem; }
+.code-lightbox-header h2 { color: #e1eddc; font: 600 clamp(.9rem, 3vw, 1.15rem) Consolas, monospace; margin: .25rem 0 0; overflow-wrap: anywhere; }
+.code-lightbox-close { width: 44px; height: 44px; flex-shrink: 0; border: 1px solid #86a67b; border-radius: 50%; background: transparent; color: white; font-size: 1.8rem; cursor: pointer; }
+.code-lightbox-scroll { flex: 1; min-height: 0; margin: 0; padding: 1.3rem; overflow: auto; overscroll-behavior: contain; font: .85rem/1.7 Consolas, 'Courier New', monospace; tab-size: 4; }
+.code-lightbox-scroll code { color: inherit; font: inherit; }
+.code-lightbox-footer { flex-wrap: wrap; font-size: .8rem; color: #c2dbb5; }
+.code-lightbox-footer a { color: #e1eddc; text-decoration: underline; text-underline-offset: 3px; }
+.code-lightbox :focus-visible { outline: 3px solid #c2dbb5; outline-offset: -3px; }
+
 /* ---------- Garden gallery ---------- */
 .garden-gallery {
   display: grid;

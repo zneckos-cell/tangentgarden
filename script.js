@@ -44,6 +44,63 @@
     });
   }
 
+  /* ---------- Source code lightbox ---------- */
+  var codeDialog = document.getElementById("codeLightbox");
+  var codeTitle = document.getElementById("codeLightboxTitle");
+  var codeContent = document.getElementById("codeLightboxContent");
+  var codeRawLink = document.getElementById("codeRawLink");
+  var codeTrigger = null;
+  var codeRequest = null;
+
+  if (codeDialog && typeof codeDialog.showModal === "function") {
+    document.querySelectorAll(".input-source-links a").forEach(function (link) {
+      link.setAttribute("aria-haspopup", "dialog");
+      link.addEventListener("click", async function (event) {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        if (codeRequest) codeRequest.abort();
+        var request = new AbortController();
+        codeRequest = request;
+        codeTrigger = link;
+        codeTitle.textContent = link.textContent.replace("</>", "").trim();
+        codeRawLink.href = link.href;
+        codeContent.textContent = "Loading source…";
+        codeContent.parentElement.scrollTop = 0;
+        codeContent.parentElement.scrollLeft = 0;
+        codeDialog.setAttribute("aria-busy", "true");
+        codeDialog.showModal();
+        document.documentElement.classList.add("lightbox-open");
+        try {
+          var response = await fetch(link.href, { signal: request.signal });
+          if (!response.ok) throw new Error("Source unavailable");
+          var source = await response.text();
+          // Source is always plain text, never HTML inserted into the page.
+          if (codeRequest === request) codeContent.textContent = source;
+        } catch (error) {
+          if (codeRequest === request && error.name !== "AbortError") {
+            codeContent.textContent = "Could not load this file. Use ‘Open text file in new tab’ below to read it directly.";
+          }
+        } finally {
+          if (codeRequest === request) codeDialog.removeAttribute("aria-busy");
+        }
+      });
+    });
+    codeDialog.querySelector(".code-lightbox-close").addEventListener("click", function () {
+      codeDialog.close();
+    });
+    codeDialog.addEventListener("click", function (event) {
+      if (event.target === codeDialog) codeDialog.close();
+    });
+    codeDialog.addEventListener("close", function () {
+      if (codeRequest) codeRequest.abort();
+      codeRequest = null;
+      codeDialog.removeAttribute("aria-busy");
+      codeContent.textContent = "";
+      document.documentElement.classList.remove("lightbox-open");
+      if (codeTrigger) codeTrigger.focus({ preventScroll: true });
+    });
+  }
+
   /* ---------- Sticky header shadow on scroll ---------- */
   var header = document.getElementById("siteHeader");
   var progress = document.getElementById("scrollProgress");
