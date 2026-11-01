@@ -1,135 +1,168 @@
-/* ==========================================================
-   Tangentgarden — site script (vanilla JS, no dependencies)
-   ========================================================== */
+/* =====================================================================
+   Tangentgarden — script.js
+   Vanilla JS: sticky nav state, mobile menu, scroll progress,
+   scroll reveal, animated stat counters, back-to-top, year-agnostic.
+   ===================================================================== */
 
-/* ---------- Configuration: edit these values ---------- */
-const CONFIG = {
-  // Replace with your GitHub Release, Itch.io or direct download URL.
-  // Leave as "" to keep the URL written in index.html.
-  downloadUrl: "",
-  // Words shown in the hero typing animation
-  typingWords: ["sunflower", "carrot", "lavender", "pumpkin", "tulip", "harvest"],
-};
+(function () {
+  "use strict";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* ---------- Sticky header shadow on scroll ---------- */
+  var header = document.getElementById("siteHeader");
+  var progress = document.getElementById("scrollProgress");
+  var backToTop = document.getElementById("backToTop");
 
-  /* ---------- Footer year ---------- */
-  document.getElementById("year").textContent = new Date().getFullYear();
+  function onScroll() {
+    var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    var docHeight =
+      document.documentElement.scrollHeight - window.innerHeight;
+    var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
 
-  /* ---------- Download URL ---------- */
-  const downloadBtn = document.getElementById("downloadBtn");
-  if (CONFIG.downloadUrl) downloadBtn.href = CONFIG.downloadUrl;
-  downloadBtn.addEventListener("click", (e) => {
-    if (downloadBtn.getAttribute("href") === "#DOWNLOAD_URL") {
-      e.preventDefault();
-      alert("The download link isn't available yet — check back soon!");
+    if (progress) progress.style.width = pct + "%";
+
+    if (header) header.classList.toggle("scrolled", scrollTop > 8);
+
+    if (backToTop) {
+      var show = scrollTop > 600;
+      backToTop.classList.toggle("show", show);
+      backToTop.hidden = !show;
     }
-  });
-
-  /* ---------- Sticky nav shadow ---------- */
-  const navbar = document.getElementById("navbar");
-  const onScroll = () => navbar.classList.toggle("scrolled", window.scrollY > 10);
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
-
-  /* ---------- Mobile hamburger menu ---------- */
-  const toggle = document.getElementById("navToggle");
-  const menu = document.getElementById("navMenu");
-  const setMenu = (open) => {
-    menu.classList.toggle("open", open);
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-  };
-  toggle.addEventListener("click", () => setMenu(!menu.classList.contains("open")));
-  menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && menu.classList.contains("open")) { setMenu(false); toggle.focus(); }
-  });
-
-  /* ---------- Smooth scrolling (with sticky nav offset) ---------- */
-  document.querySelectorAll('a[href^="#"]').forEach((link) => {
-    link.addEventListener("click", (e) => {
-      const id = link.getAttribute("href");
-      if (id.length < 2 || id === "#DOWNLOAD_URL") return;
-      const target = document.querySelector(id);
-      if (!target) return;
-      e.preventDefault();
-      const top = target.getBoundingClientRect().top + window.scrollY - navbar.offsetHeight;
-      window.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
-      history.replaceState(null, "", id);
-    });
-  });
-
-  /* ---------- Active nav link highlighting ---------- */
-  const navLinks = [...menu.querySelectorAll('a:not(.btn)')];
-  const sectionObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        navLinks.forEach((l) => l.classList.toggle("active", l.getAttribute("href") === "#" + entry.target.id));
-      }
-    });
-  }, { rootMargin: "-45% 0px -50% 0px" });
-  document.querySelectorAll("main section[id]").forEach((s) => sectionObserver.observe(s));
-
-  /* ---------- Scroll reveal ---------- */
-  const revealEls = document.querySelectorAll(".reveal");
-  if (reduceMotion || !("IntersectionObserver" in window)) {
-    revealEls.forEach((el) => el.classList.add("visible"));
-  } else {
-    const revealObserver = new IntersectionObserver((entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // Stagger siblings slightly for a softer effect
-          const siblings = [...entry.target.parentElement.children];
-          entry.target.style.transitionDelay = `${Math.min(siblings.indexOf(entry.target), 8) * 60}ms`;
-          entry.target.classList.add("visible");
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    revealEls.forEach((el) => revealObserver.observe(el));
   }
 
-  /* ---------- FAQ accordion ---------- */
-  document.querySelectorAll(".faq-q").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const item = btn.closest(".faq-item");
-      const panel = document.getElementById(btn.getAttribute("aria-controls"));
-      const isOpen = item.classList.contains("open");
+  /* ---------- Mobile nav toggle ---------- */
+  var navToggle = document.getElementById("navToggle");
+  var primaryNav = document.getElementById("primaryNav");
 
-      // Close all others (one open at a time)
-      document.querySelectorAll(".faq-item.open").forEach((other) => {
-        if (other !== item) {
-          other.classList.remove("open");
-          other.querySelector(".faq-q").setAttribute("aria-expanded", "false");
-          other.querySelector(".faq-a").style.maxHeight = null;
-        }
-      });
+  function closeNav() {
+    if (!primaryNav || !navToggle) return;
+    primaryNav.classList.remove("open");
+    navToggle.setAttribute("aria-expanded", "false");
+    navToggle.setAttribute("aria-label", "Open menu");
+  }
 
-      item.classList.toggle("open", !isOpen);
-      btn.setAttribute("aria-expanded", String(!isOpen));
-      panel.style.maxHeight = isOpen ? null : panel.scrollHeight + "px";
+  if (navToggle && primaryNav) {
+    navToggle.addEventListener("click", function () {
+      var isOpen = primaryNav.classList.toggle("open");
+      navToggle.setAttribute("aria-expanded", String(isOpen));
+      navToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+    });
+
+    /* Close on link click (mobile) */
+    primaryNav.addEventListener("click", function (e) {
+      if (e.target.tagName === "A") closeNav();
+    });
+  }
+
+  /* ---------- Smooth scroll for in-page anchors ---------- */
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var href = a.getAttribute("href");
+    if (!href || href === "#") return;
+    var target = document.querySelector(href);
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    closeNav();
+  });
+
+  /* ---------- Scroll reveal ---------- */
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && reveals.length) {
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+    );
+    reveals.forEach(function (el) {
+      io.observe(el);
+    });
+  } else {
+    reveals.forEach(function (el) {
+      el.classList.add("in");
+    });
+  }
+
+  /* ---------- Animated stat counters ---------- */
+  function animateCounter(el) {
+    var target = parseInt(el.getAttribute("data-count"), 10);
+    if (isNaN(target)) return;
+    var suffix = el.textContent.replace(/[0-9]/g, "").trim();
+    var start = 0;
+    var duration = 1400;
+    var startTime = null;
+
+    function step(ts) {
+      if (!startTime) startTime = ts;
+      var progressVal = Math.min((ts - startTime) / duration, 1);
+      // easeOutQuad
+      var eased = 1 - (1 - progressVal) * (1 - progressVal);
+      var value = Math.round(start + (target - start) * eased);
+      el.textContent = value + suffix;
+      if (progressVal < 1) requestAnimationFrame(step);
+      else el.textContent = target + suffix;
+    }
+    requestAnimationFrame(step);
+  }
+
+  var statNums = document.querySelectorAll(".stat-num[data-count]");
+  if ("IntersectionObserver" in window && statNums.length) {
+    var statIO = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            animateCounter(entry.target);
+            statIO.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+    statNums.forEach(function (el) {
+      statIO.observe(el);
+    });
+  }
+
+  /* ---------- FAQ: allow only one open at a time (optional nicety) ---------- */
+  var faqItems = document.querySelectorAll(".faq-item");
+  faqItems.forEach(function (item) {
+    item.addEventListener("toggle", function () {
+      if (item.open) {
+        faqItems.forEach(function (other) {
+          if (other !== item) other.open = false;
+        });
+      }
     });
   });
 
-  // Keep an open FAQ answer sized correctly when the window is resized
-  window.addEventListener("resize", () => {
-    document.querySelectorAll(".faq-item.open .faq-a").forEach((a) => { a.style.maxHeight = a.scrollHeight + "px"; });
-  });
+  /* ---------- Back to top ---------- */
+  if (backToTop) {
+    backToTop.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
 
-  /* ---------- Hero typing animation ---------- */
-  const typed = document.getElementById("typedText");
-  if (reduceMotion) { typed.textContent = CONFIG.typingWords[0]; return; }
-  let wordIndex = 0, charIndex = 0, deleting = false;
-  const tick = () => {
-    const word = CONFIG.typingWords[wordIndex];
-    typed.textContent = word.slice(0, charIndex);
-    let delay = deleting ? 60 : 120;
-    if (!deleting && charIndex === word.length) { delay = 1400; deleting = true; }
-    else if (deleting && charIndex === 0) { deleting = false; wordIndex = (wordIndex + 1) % CONFIG.typingWords.length; delay = 400; }
-    else charIndex += deleting ? -1 : 1;
-    setTimeout(tick, delay);
-  };
-  tick();
-});
+  /* ---------- Wire scroll (rAF-throttled) ---------- */
+  var ticking = false;
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!ticking) {
+        window.requestAnimationFrame(function () {
+          onScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
+
+  onScroll();
+})();
