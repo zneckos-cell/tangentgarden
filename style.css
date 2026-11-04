@@ -236,6 +236,11 @@ ol {
   font-size: 1.12rem;
   padding: 1em 2.2em;
 }
+.btn-disabled {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
 
 /* ---------- Scroll progress ---------- */
 .scroll-progress {
@@ -304,10 +309,11 @@ ol {
   gap: 0.25rem;
 }
 .primary-nav a {
+  white-space: nowrap;
   font-size: 0.92rem;
   font-weight: 500;
   color: var(--text-soft);
-  padding: 0.45em 0.8em;
+  padding: 0.45em 0.6em;
   border-radius: 999px;
   text-decoration: none;
   transition: background 0.16s ease, color 0.16s ease;
@@ -654,7 +660,7 @@ ol {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 .loop-step {
@@ -1748,6 +1754,18 @@ a.shot { cursor: zoom-in; }
   .trust-banner {
     flex-direction: column;
     gap: 0.8rem;
+  }
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero-title {
+    font-size: 11vw;
+  }
+  .shot-gallery {
+    min-height: 0;
+  }
+  .hero-actions {
+    flex-wrap: wrap;
   }
   .hero-actions .btn {
     flex: 1;
